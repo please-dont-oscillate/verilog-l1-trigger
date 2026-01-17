@@ -1,18 +1,16 @@
 `timescale 1ns / 1ps
 
 module neuron (
-    input clk,                  // The heart of the system: synchronize everything
-    input rst,                  // Reset: Bring everything to zero
-    input signed [7:0] x1,      // Input 1 (signed, 8-bit)
-    input signed [7:0] x2,      // Input 2
-    input signed [7:0] w1,      // weight for Input 1
-    input signed [7:0] w2,      // weight for Input 2
-    input signed [7:0] b,       // Bias (the basic threshold)
-    output reg signed [15:0] y  // Output (16 bits to hold the BIG result)
+    input clk,                      // The heartbeat
+    input rst,                      // The "Men in Black" memory eraser
+    input signed [7:0] x1,          // Input 1
+    input signed [7:0] x2,          // Input 2
+    input signed [7:0] w1,          // Weight 1 (How much we care about Input 1)
+    input signed [7:0] w2,          // Weight 2 (How much we care about Input 2)
+    input signed [7:0] b,           // Bias (The neuron's predisposition to complain)
+    output reg signed [15:0] y      // The Output
 );
 
-    // Internal variables (wires) for intermediate calculations
-    // They must be big enough!
     reg signed [15:0] mult1;
     reg signed [15:0] mult2;
     reg signed [15:0] sum_raw;
@@ -24,18 +22,20 @@ module neuron (
             mult2 <= 0;
             sum_raw <= 0;
         end else begin
-            // STEP 1: Multiplication (Fixed Point)
-            // Python: x * w
+            // STEP 1: The Multiplication
+            // This is where numbers get big. Fast.
             mult1 <= x1 * w1;
             mult2 <= x2 * w2;
 
-            // STEP 2: Sum (Accumulate)
-            // Python: (x1*w1) + (x2*w2) + bias
-            // Note: Bias (8-bit) is automatically extended
-            sum_raw <= mult1 + mult2 + b; 
+            // STEP 2: Summation with NORMALIZATION (The "Math Savior")
+            // Since we multiplied scaled numbers by scaled numbers, the result is huge.
+            // We divide by 128 (shift right >>> 7) to bring it back to earth.
+            // Without this, our neural network is just a random number generator.
+            sum_raw <= (mult1 >>> 7) + (mult2 >>> 7) + b; 
 
-            // STEP 3: ReLU Activation (The "AI" Part)
-            // If the sum is negative, the output is 0. Otherwise it is the sum.
+            // STEP 3: ReLU Activation (The "No Negativity" Policy)
+            // If the result is negative, we pretend it never happened (0).
+            // If positive, we keep it. Simple psychology.
             if (sum_raw < 0) 
                 y <= 0;
             else 
